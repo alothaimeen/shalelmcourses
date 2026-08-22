@@ -1,0 +1,23 @@
+# Dependencies and generated files.
+/vendor/
+/node_modules/
+/.phpunit.cache/
+/.phpunit.result.cache
+/.phpcs-cache
+/coverage/
+
+# Local configuration and secrets.
+.env
+.env.*
+!.env.example
+*.local.php
+
+# IDE and operating-system files.
+/.idea/
+/.vscode/
+.DS_Store
+Thumbs.db
+
+# Release archives are attached to GitHub Releases, not committed.
+*.zip
+*.tgz

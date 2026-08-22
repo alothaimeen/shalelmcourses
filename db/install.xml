@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<XMLDB PATH="local/shomokh_admissions/db" VERSION="2026082000" COMMENT="XMLDB file for Shomokh admissions">
+  <TABLES>
+    <TABLE NAME="local_shadm_program" COMMENT="Admission destinations and eligibility sets">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="code" TYPE="char" LENGTH="64" NOTNULL="true"/>
+        <FIELD NAME="name" TYPE="char" LENGTH="255" NOTNULL="true"/>
+        <FIELD NAME="description" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="requirements" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="programtype" TYPE="char" LENGTH="20" NOTNULL="true"/>
+        <FIELD NAME="track" TYPE="char" LENGTH="32" NOTNULL="false"/>
+        <FIELD NAME="batchname" TYPE="char" LENGTH="64" NOTNULL="false"/>
+        <FIELD NAME="cohortid" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="telegramurl" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="enabled" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="registrationopen" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="recognizeexisting" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="defaultfallback" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="sortorder" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="code_uix" UNIQUE="true" FIELDS="code"/>
+        <INDEX NAME="type_enabled_ix" UNIQUE="false" FIELDS="programtype,enabled"/>
+        <INDEX NAME="cohort_ix" UNIQUE="false" FIELDS="cohortid"/>
+      </INDEXES>
+    </TABLE>
+    <TABLE NAME="local_shadm_progcourse" COMMENT="Courses assigned to an admission destination">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="programid" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="eligibilityrequired" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="sortorder" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="program_fk" TYPE="foreign" FIELDS="programid" REFTABLE="local_shadm_program" REFFIELDS="id"/>
+        <KEY NAME="course_fk" TYPE="foreign" FIELDS="courseid" REFTABLE="course" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="programcourse_uix" UNIQUE="true" FIELDS="programid,courseid"/>
+        <INDEX NAME="eligibility_ix" UNIQUE="false" FIELDS="programid,eligibilityrequired"/>
+      </INDEXES>
+    </TABLE>
+    <TABLE NAME="local_shadm_application" COMMENT="Student admission applications and decisions">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="targetprogramid" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="fallbackprogramid" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="enrolledprogramid" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="eligibilitysource" TYPE="char" LENGTH="24" NOTNULL="true"/>
+        <FIELD NAME="status" TYPE="char" LENGTH="32" NOTNULL="true"/>
+        <FIELD NAME="decisionby" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="decisionnote" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="studentmessage" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="timedecided" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="timeenrolled" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="recordversion" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="1"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="user_fk" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id"/>
+        <KEY NAME="target_fk" TYPE="foreign" FIELDS="targetprogramid" REFTABLE="local_shadm_program" REFFIELDS="id"/>
+        <KEY NAME="fallback_fk" TYPE="foreign" FIELDS="fallbackprogramid" REFTABLE="local_shadm_program" REFFIELDS="id"/>
+        <KEY NAME="enrolled_fk" TYPE="foreign" FIELDS="enrolledprogramid" REFTABLE="local_shadm_program" REFFIELDS="id"/>
+        <KEY NAME="decisionby_fk" TYPE="foreign" FIELDS="decisionby" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="userprogram_uix" UNIQUE="true" FIELDS="userid,targetprogramid"/>
+        <INDEX NAME="statuscreated_ix" UNIQUE="false" FIELDS="status,timecreated"/>
+        <INDEX NAME="enrolledprogram_ix" UNIQUE="false" FIELDS="enrolledprogramid"/>
+      </INDEXES>
+    </TABLE>
+    <TABLE NAME="local_shadm_enrolop" COMMENT="Retryable enrolment operations">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="applicationid" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="programid" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="status" TYPE="char" LENGTH="20" NOTNULL="true"/>
+        <FIELD NAME="attempts" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="nextrun" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="lasterror" TYPE="text" NOTNULL="false"/>
+        <FIELD NAME="cohortadded" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="application_fk" TYPE="foreign" FIELDS="applicationid" REFTABLE="local_shadm_application" REFFIELDS="id"/>
+        <KEY NAME="user_fk" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id"/>
+        <KEY NAME="program_fk" TYPE="foreign" FIELDS="programid" REFTABLE="local_shadm_program" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="application_uix" UNIQUE="true" FIELDS="applicationid"/>
+        <INDEX NAME="due_ix" UNIQUE="false" FIELDS="status,nextrun"/>
+      </INDEXES>
+    </TABLE>
+    <TABLE NAME="local_shadm_enrollog" COMMENT="Enrolments observed or created by an operation">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="enrolopid" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="programid" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="enrolinstanceid" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="userenrolid" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="ownership" TYPE="char" LENGTH="16" NOTNULL="true"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="enrolop_fk" TYPE="foreign" FIELDS="enrolopid" REFTABLE="local_shadm_enrolop" REFFIELDS="id"/>
+        <KEY NAME="user_fk" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id"/>
+        <KEY NAME="program_fk" TYPE="foreign" FIELDS="programid" REFTABLE="local_shadm_program" REFFIELDS="id"/>
+        <KEY NAME="course_fk" TYPE="foreign" FIELDS="courseid" REFTABLE="course" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="operationcourse_uix" UNIQUE="true" FIELDS="enrolopid,courseid"/>
+        <INDEX NAME="usercourse_ix" UNIQUE="false" FIELDS="userid,courseid"/>
+      </INDEXES>
+    </TABLE>
+    <TABLE NAME="local_shadm_audit" COMMENT="Immutable admission workflow audit trail">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="applicationid" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="actorid" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="action" TYPE="char" LENGTH="64" NOTNULL="true"/>
+        <FIELD NAME="oldstatus" TYPE="char" LENGTH="32" NOTNULL="false"/>
+        <FIELD NAME="newstatus" TYPE="char" LENGTH="32" NOTNULL="false"/>
+        <FIELD NAME="detailcode" TYPE="char" LENGTH="64" NOTNULL="false"/>
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="application_ix" UNIQUE="false" FIELDS="applicationid,timecreated"/>
+        <INDEX NAME="actor_ix" UNIQUE="false" FIELDS="actorid,timecreated"/>
+      </INDEXES>
+    </TABLE>
+  </TABLES>
+</XMLDB>
