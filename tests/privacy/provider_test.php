@@ -28,7 +28,7 @@ use core_privacy\local\request\writer;
  * @copyright  2026 Shomokh Al-Elm
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-final class privacy_provider_test extends \core_privacy\tests\provider_testcase {
+final class provider_test extends \core_privacy\tests\provider_testcase {
     /**
      * Creates one minimal application and attached private file.
      *
