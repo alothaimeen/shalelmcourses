@@ -19,6 +19,7 @@ namespace local_shomokh_admissions;
 /**
  * Tests application, review, consent and enrolment states end to end.
  *
+ * @covers     \local_shomokh_admissions\application_service
  * @package    local_shomokh_admissions
  * @copyright  2026 Shomokh Al-Elm
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later

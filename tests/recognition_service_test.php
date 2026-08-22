@@ -19,6 +19,7 @@ namespace local_shomokh_admissions;
 /**
  * Tests recognition of legacy students from their current Moodle enrolments.
  *
+ * @covers     \local_shomokh_admissions\recognition_service
  * @package    local_shomokh_admissions
  * @copyright  2026 Shomokh Al-Elm
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later

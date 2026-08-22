@@ -31,7 +31,10 @@ use core_privacy\local\request\writer;
  * @copyright  2026 Shomokh Al-Elm
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-final class provider implements \core_privacy\local\metadata\provider, \core_privacy\local\request\core_userlist_provider, \core_privacy\local\request\plugin\provider {
+final class provider implements
+    \core_privacy\local\metadata\provider,
+    \core_privacy\local\request\core_userlist_provider,
+    \core_privacy\local\request\plugin\provider {
     /**
      * Describes stored personal data.
      *

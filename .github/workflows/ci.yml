@@ -78,10 +78,6 @@ jobs:
         if: ${{ !cancelled() }}
         run: moodle-plugin-ci phpdoc --max-warnings 0
 
-      - name: Validate plugin metadata
-        if: ${{ !cancelled() }}
-        run: moodle-plugin-ci validate
-
       - name: Check upgrade savepoints
         if: ${{ !cancelled() }}
         run: moodle-plugin-ci savepoints

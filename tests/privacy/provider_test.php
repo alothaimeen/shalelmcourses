@@ -23,6 +23,7 @@ use core_privacy\local\request\writer;
 /**
  * Tests Privacy API coverage for admission records and qualification files.
  *
+ * @covers     \local_shomokh_admissions\privacy\provider
  * @package    local_shomokh_admissions
  * @copyright  2026 Shomokh Al-Elm
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
