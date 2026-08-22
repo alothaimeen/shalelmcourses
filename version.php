@@ -25,8 +25,8 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_shomokh_admissions';
-$plugin->version = 2026082201;
+$plugin->version = 2026082202;
 $plugin->requires = 2024100700;
 $plugin->supported = [405, 405];
 $plugin->maturity = MATURITY_RC;
-$plugin->release = '1.0.0-rc5';
+$plugin->release = '1.0.0-rc6';

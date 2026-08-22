@@ -52,8 +52,8 @@ final class course_add_form extends \moodleform {
         ]);
         $mform->setType('courseid', PARAM_INT);
         $mform->addRule('courseid', get_string('required'), 'required', null, 'client');
-        $mform->addElement('hidden', 'programid', (int)$this->_customdata['programid']);
-        $mform->setType('programid', PARAM_INT);
+        $mform->addElement('hidden', 'id', (int)$this->_customdata['programid']);
+        $mform->setType('id', PARAM_INT);
         $mform->addElement('submit', 'addcourse', get_string('addcourse', 'local_shomokh_admissions'));
     }
 

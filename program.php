@@ -24,13 +24,17 @@
 
 require_once(__DIR__ . '/../../config.php');
 
-$programid = required_param('id', PARAM_INT);
 require_login();
 $context = context_system::instance();
 require_capability('local/shomokh_admissions:manageprograms', $context);
+$programid = optional_param('id', 0, PARAM_INT);
+if (!$programid) {
+    redirect(new moodle_url('/local/shomokh_admissions/programs.php'));
+}
 $program = \local_shomokh_admissions\program_repository::get($programid);
+$programurl = new moodle_url('/local/shomokh_admissions/program.php', ['id' => $programid]);
 $PAGE->set_context($context);
-$PAGE->set_url(new moodle_url('/local/shomokh_admissions/program.php', ['id' => $programid]));
+$PAGE->set_url($programurl);
 $PAGE->set_pagelayout('admin');
 $PAGE->set_title(format_string($program->name));
 $PAGE->set_heading(format_string($program->name));

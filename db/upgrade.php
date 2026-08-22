@@ -56,5 +56,10 @@ function xmldb_local_shomokh_admissions_upgrade(int $oldversion): bool {
         upgrade_plugin_savepoint(true, 2026082201, 'local', 'shomokh_admissions');
     }
 
+    if ($oldversion < 2026082202) {
+        // No schema change: preserve the selected program when an administrator links a course.
+        upgrade_plugin_savepoint(true, 2026082202, 'local', 'shomokh_admissions');
+    }
+
     return true;
 }
