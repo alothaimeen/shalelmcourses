@@ -175,11 +175,15 @@ final class readiness_and_preview_test extends \advanced_testcase {
             $errors['global']
         );
 
-        $resultcourse = $this->getDataGenerator()->create_course();
-        $resultitem = \grade_item::fetch_course_item((int)$resultcourse->id);
-        $DB->set_field('grade_items', 'calculation', '=1', ['id' => $resultitem->id]);
-        $DB->set_field('local_shadm_program', 'eligibilitygradeitemid', $resultitem->id, ['id' => $foundation->id]);
-        $DB->set_field('local_shadm_program', 'eligibilitymingrade', 1, ['id' => $foundation->id]);
+        foreach ([eligibility_repository::LEGACY_BATCH_1, eligibility_repository::LEGACY_BATCH_2] as $code) {
+            $resultcourse = $this->getDataGenerator()->create_course();
+            $resultitem = \grade_item::fetch_course_item((int)$resultcourse->id);
+            $DB->set_field('grade_items', 'calculation', '=1', ['id' => $resultitem->id]);
+            $group = eligibility_repository::get_group_by_code($code);
+            $this->assertNotNull($group);
+            eligibility_repository::add_item((int)$group->id, (int)$resultitem->id, 1);
+            eligibility_repository::set_group_enabled((int)$group->id, true);
+        }
 
         $errors = readiness_service::check_global();
         $this->assertArrayNotHasKey('global', $errors);

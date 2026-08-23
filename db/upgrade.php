@@ -153,5 +153,151 @@ function xmldb_local_shomokh_admissions_upgrade(int $oldversion): bool {
         upgrade_plugin_savepoint(true, 2026082301, 'local', 'shomokh_admissions');
     }
 
+    if ($oldversion < 2026082302) {
+        $dbman = $DB->get_manager();
+
+        $grouptable = new xmldb_table('local_shadm_eliggroup');
+        $grouptable->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE);
+        $grouptable->add_field('code', XMLDB_TYPE_CHAR, '64', null, XMLDB_NOTNULL);
+        $grouptable->add_field('name', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL);
+        $grouptable->add_field('enabled', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '0');
+        $grouptable->add_field('sortorder', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $grouptable->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL);
+        $grouptable->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL);
+        $grouptable->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $grouptable->add_index('code_uix', XMLDB_INDEX_UNIQUE, ['code']);
+        $grouptable->add_index('enabled_sort_ix', XMLDB_INDEX_NOTUNIQUE, ['enabled', 'sortorder']);
+        if (!$dbman->table_exists($grouptable)) {
+            $dbman->create_table($grouptable);
+        }
+
+        $itemtable = new xmldb_table('local_shadm_eligitem');
+        $itemtable->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE);
+        $itemtable->add_field('groupid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL);
+        $itemtable->add_field('gradeitemid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL);
+        $itemtable->add_field('mingrade', XMLDB_TYPE_NUMBER, '10, 5', null, XMLDB_NOTNULL, null, '1');
+        $itemtable->add_field('sortorder', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $itemtable->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL);
+        $itemtable->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL);
+        $itemtable->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $itemtable->add_key('group_fk', XMLDB_KEY_FOREIGN, ['groupid'], 'local_shadm_eliggroup', ['id']);
+        $itemtable->add_index('groupitem_uix', XMLDB_INDEX_UNIQUE, ['groupid', 'gradeitemid']);
+        $itemtable->add_index('gradeitem_ix', XMLDB_INDEX_NOTUNIQUE, ['gradeitemid']);
+        if (!$dbman->table_exists($itemtable)) {
+            $dbman->create_table($itemtable);
+        }
+
+        // Specialist eligibility is independent from the four enrolment destinations.
+        // Explicitly discard the migrated third-batch level-one condition.
+        $DB->set_field('local_shadm_program', 'eligibilitygradeitemid', null);
+        $DB->set_field('local_shadm_program', 'eligibilitymingrade', 1);
+
+        local_shomokh_admissions_seed_legacy_graduation_rules();
+        upgrade_plugin_savepoint(true, 2026082302, 'local', 'shomokh_admissions');
+    }
+
     return true;
+}
+
+/**
+ * Seeds the two manager-approved legacy graduation alternatives.
+ *
+ * The migration enables a group only when every expected calculated result
+ * is found exactly once. Ambiguity therefore fails closed and remains visible
+ * on the eligibility administration page.
+ *
+ * @return void
+ */
+function local_shomokh_admissions_seed_legacy_graduation_rules(): void {
+    global $DB;
+
+    $definitions = [
+        [
+            'code' => 'foundation_graduates_b1',
+            'name' => 'خريجات الدبلوم التأسيسي — الدفعة الأولى',
+            'course' => 'نتيجة المستوى الثالث',
+            'items' => ['اكمال دورات 1', 'اكمال دورات 2', 'اكمال الدورات 3'],
+            'sortorder' => 10,
+        ],
+        [
+            'code' => 'foundation_graduates_b2',
+            'name' => 'خريجات الدبلوم التأسيسي — الدفعة الثانية',
+            'course' => 'نتيجة الدفعة الثانية - المستوى الثانى',
+            'items' => ['اكمال الدورات1', 'اكمال الدورات2'],
+            'sortorder' => 20,
+        ],
+    ];
+    $sql = "SELECT gi.id, gi.itemname, c.fullname AS coursename
+              FROM {grade_items} gi
+              JOIN {course} c ON c.id = gi.courseid
+             WHERE gi.gradetype = :gradetype
+               AND gi.calculation IS NOT NULL
+               AND gi.itemname IS NOT NULL";
+    $candidates = $DB->get_records_sql($sql, ['gradetype' => 1]);
+    $now = time();
+
+    foreach ($definitions as $definition) {
+        $group = $DB->get_record('local_shadm_eliggroup', ['code' => $definition['code']]);
+        if (!$group) {
+            $group = (object)[
+                'code' => $definition['code'],
+                'name' => $definition['name'],
+                'enabled' => 0,
+                'sortorder' => $definition['sortorder'],
+                'timecreated' => $now,
+                'timemodified' => $now,
+            ];
+            $group->id = $DB->insert_record('local_shadm_eliggroup', $group);
+        }
+
+        $matchedids = [];
+        foreach ($definition['items'] as $expecteditem) {
+            $matches = [];
+            foreach ($candidates as $candidate) {
+                if (
+                    local_shomokh_admissions_normalise_result_label($candidate->coursename)
+                        === local_shomokh_admissions_normalise_result_label($definition['course'])
+                    && local_shomokh_admissions_normalise_result_label($candidate->itemname)
+                        === local_shomokh_admissions_normalise_result_label($expecteditem)
+                ) {
+                    $matches[] = (int)$candidate->id;
+                }
+            }
+            if (count($matches) !== 1) {
+                $matchedids = [];
+                break;
+            }
+            $matchedids[] = reset($matches);
+        }
+
+        $DB->delete_records('local_shadm_eligitem', ['groupid' => $group->id]);
+        foreach ($matchedids as $index => $gradeitemid) {
+            $DB->insert_record('local_shadm_eligitem', (object)[
+                'groupid' => $group->id,
+                'gradeitemid' => $gradeitemid,
+                'mingrade' => 1,
+                'sortorder' => ($index + 1) * 10,
+                'timecreated' => $now,
+                'timemodified' => $now,
+            ]);
+        }
+        $DB->set_field(
+            'local_shadm_eliggroup',
+            'enabled',
+            count($matchedids) === count($definition['items']) ? 1 : 0,
+            ['id' => $group->id]
+        );
+        $DB->set_field('local_shadm_eliggroup', 'timemodified', $now, ['id' => $group->id]);
+    }
+}
+
+/**
+ * Canonicalises known Arabic result labels for strict migration matching.
+ *
+ * @param string $value Label.
+ * @return string
+ */
+function local_shomokh_admissions_normalise_result_label(string $value): string {
+    $value = str_replace(["\u{00A0}", 'أ', 'إ', 'آ', 'ى'], ['', 'ا', 'ا', 'ا', 'ي'], trim($value));
+    return (string)preg_replace('/\s+/u', '', $value);
 }

@@ -34,6 +34,11 @@ $PAGE->set_title(get_string('programs', 'local_shomokh_admissions'));
 $PAGE->set_heading(get_string('programs', 'local_shomokh_admissions'));
 
 echo $OUTPUT->header();
+echo html_writer::link(
+    new moodle_url('/local/shomokh_admissions/eligibility.php'),
+    get_string('eligibility:title', 'local_shomokh_admissions'),
+    ['class' => 'btn btn-secondary mb-3']
+);
 echo html_writer::start_tag('div', ['class' => 'local-shadm-grid']);
 foreach (\local_shomokh_admissions\program_repository::get_all() as $program) {
     $errors = \local_shomokh_admissions\readiness_service::check_program($program);

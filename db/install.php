@@ -84,6 +84,23 @@ function xmldb_local_shomokh_admissions_install(): void {
         $DB->insert_record('local_shadm_program', $record);
     }
 
+    // These alternatives remain disabled until all of their calculated final
+    // results are selected. Installation must never guess admission evidence.
+    $eligibilitygroups = [
+        ['foundation_graduates_b1', 'خريجات الدبلوم التأسيسي — الدفعة الأولى', 10],
+        ['foundation_graduates_b2', 'خريجات الدبلوم التأسيسي — الدفعة الثانية', 20],
+    ];
+    foreach ($eligibilitygroups as [$code, $name, $sortorder]) {
+        $DB->insert_record('local_shadm_eliggroup', (object)[
+            'code' => $code,
+            'name' => $name,
+            'enabled' => 0,
+            'sortorder' => $sortorder,
+            'timecreated' => $now,
+            'timemodified' => $now,
+        ]);
+    }
+
     set_config('enabled', 0, 'local_shomokh_admissions');
     set_config('publicpreview', 0, 'local_shomokh_admissions');
     set_config('maxcertificatebytes', 5 * 1024 * 1024, 'local_shomokh_admissions');

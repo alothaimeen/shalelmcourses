@@ -88,16 +88,16 @@ final class application_service_test extends \advanced_testcase {
     }
 
     /**
-     * Configures a course total as the authoritative full-level result.
+     * Adds one calculated result to an independent graduation group.
      *
-     * @param \stdClass $program Foundation program.
+     * @param string $groupcode Eligibility group code.
      * @param \stdClass $course Result course.
      * @param \stdClass $student Student receiving the result.
      * @param float $grade Result value.
      * @return \grade_item Configured item.
      */
-    private function configure_level_result(
-        \stdClass $program,
+    private function configure_graduation_result(
+        string $groupcode,
         \stdClass $course,
         \stdClass $student,
         float $grade
@@ -106,8 +106,10 @@ final class application_service_test extends \advanced_testcase {
         $item = \grade_item::fetch_course_item((int)$course->id);
         $DB->set_field('grade_items', 'calculation', '=1', ['id' => $item->id]);
         $item = \grade_item::fetch(['id' => $item->id]);
-        $DB->set_field('local_shadm_program', 'eligibilitygradeitemid', (int)$item->id, ['id' => $program->id]);
-        $DB->set_field('local_shadm_program', 'eligibilitymingrade', 1, ['id' => $program->id]);
+        $group = eligibility_repository::get_group_by_code($groupcode);
+        $this->assertNotNull($group);
+        eligibility_repository::add_item((int)$group->id, (int)$item->id, 1);
+        eligibility_repository::set_group_enabled((int)$group->id, true);
         $item->update_final_grade((int)$student->id, $grade, 'local_shomokh_admissions_test');
         return $item;
     }
@@ -158,16 +160,20 @@ final class application_service_test extends \advanced_testcase {
         $this->prepare_test();
         $student = $this->getDataGenerator()->create_user();
         $foundationcourse = $this->create_admission_course('foundation_required');
-        $foundation = $this->configure_program('foundation_b3', $foundationcourse, false);
-        $item = $this->configure_level_result($foundation, $foundationcourse, $student, 0);
+        $item = $this->configure_graduation_result(
+            eligibility_repository::LEGACY_BATCH_1,
+            $foundationcourse,
+            $student,
+            0
+        );
         $specialistcourse = $this->create_admission_course('hadith_internal');
         $specialist = $this->configure_program('specialist_hadith', $specialistcourse);
 
         $this->assertNull(eligibility_service::completed_foundation((int)$student->id));
         $item->update_final_grade((int)$student->id, 1, 'local_shomokh_admissions_test');
         $this->assertSame(
-            (int)$foundation->id,
-            (int)eligibility_service::completed_foundation((int)$student->id)->id
+            eligibility_repository::LEGACY_BATCH_1,
+            eligibility_service::completed_foundation((int)$student->id)->code
         );
         set_config('enabled', 1, 'local_shomokh_admissions');
 
@@ -181,6 +187,109 @@ final class application_service_test extends \advanced_testcase {
             '',
             true
         ));
+    }
+
+    /**
+     * A legacy third-batch program field must no longer grant specialist eligibility.
+     */
+    public function test_third_batch_program_result_is_not_an_eligibility_source(): void {
+        global $DB;
+
+        $this->prepare_test();
+        $student = $this->getDataGenerator()->create_user();
+        $course = $this->create_admission_course('third_batch_level_one');
+        $program = $this->configure_program('foundation_b3', $course, false);
+        $item = \grade_item::fetch_course_item((int)$course->id);
+        $DB->set_field('grade_items', 'calculation', '=1', ['id' => $item->id]);
+        $item = \grade_item::fetch(['id' => $item->id]);
+        $item->update_final_grade((int)$student->id, 1, 'local_shomokh_admissions_test');
+        $DB->set_field('local_shadm_program', 'eligibilitygradeitemid', $item->id, ['id' => $program->id]);
+
+        $this->assertNull(eligibility_service::completed_foundation((int)$student->id));
+    }
+
+    /**
+     * Every condition within one batch is required, while batches are alternatives.
+     */
+    public function test_graduation_groups_use_and_within_or_between_groups(): void {
+        $this->prepare_test();
+        $student = $this->getDataGenerator()->create_user();
+        $first = $this->configure_graduation_result(
+            eligibility_repository::LEGACY_BATCH_1,
+            $this->create_admission_course('batch_one_first_condition'),
+            $student,
+            1
+        );
+        $second = $this->configure_graduation_result(
+            eligibility_repository::LEGACY_BATCH_1,
+            $this->create_admission_course('batch_one_second_condition'),
+            $student,
+            0
+        );
+
+        $this->assertNull(eligibility_service::completed_foundation((int)$student->id));
+        $second->update_final_grade((int)$student->id, 1, 'local_shomokh_admissions_test');
+        $this->assertSame(
+            eligibility_repository::LEGACY_BATCH_1,
+            eligibility_service::completed_foundation((int)$student->id)->code
+        );
+        $first->update_final_grade((int)$student->id, 0, 'local_shomokh_admissions_test');
+        $this->assertNull(eligibility_service::completed_foundation((int)$student->id));
+    }
+
+    /**
+     * A pending external request is reconciled and its certificate removed when
+     * a trusted internal graduation result is found.
+     */
+    public function test_pending_application_is_reassessed_from_internal_graduation(): void {
+        global $DB;
+
+        $this->prepare_test();
+        $student = $this->getDataGenerator()->create_user();
+        $this->setUser($student);
+        $specialistcourse = $this->create_admission_course('pending_reassessed');
+        $specialist = $this->configure_program('specialist_hadith', $specialistcourse);
+        $this->configure_graduation_result(
+            eligibility_repository::LEGACY_BATCH_1,
+            $this->create_admission_course('batch_one_not_completed'),
+            $student,
+            0
+        );
+        $batchtworesult = $this->configure_graduation_result(
+            eligibility_repository::LEGACY_BATCH_2,
+            $this->create_admission_course('batch_two_completed_later'),
+            $student,
+            0
+        );
+        $this->create_certificate_draft($student, 10008);
+        set_config('enabled', 1, 'local_shomokh_admissions');
+        $application = application_service::submit((int)$student->id, (int)$specialist->id, true, 10008);
+        $this->assertSame(application_service::STATUS_PENDING, $application->status);
+
+        $batchtworesult->update_final_grade((int)$student->id, 1, 'local_shomokh_admissions_test');
+        $this->assertSame(1, eligibility_service::reassess_pending());
+
+        $application = application_service::get((int)$application->id);
+        $this->assertSame(application_service::SOURCE_INTERNAL, $application->eligibilitysource);
+        $this->assertSame(application_service::STATUS_ENROLLED, $application->status);
+        $this->assertTrue(is_enrolled(
+            \context_course::instance((int)$specialistcourse->id),
+            (int)$student->id,
+            '',
+            true
+        ));
+        $this->assertEmpty(get_file_storage()->get_area_files(
+            \context_system::instance()->id,
+            'local_shomokh_admissions',
+            'certificate',
+            (int)$application->id,
+            'id ASC',
+            false
+        ));
+        $this->assertTrue($DB->record_exists('local_shadm_audit', [
+            'applicationid' => $application->id,
+            'action' => 'internal_eligibility_reassessed',
+        ]));
     }
 
     /**

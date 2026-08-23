@@ -87,47 +87,6 @@ final class program_form extends \moodleform {
         ]);
         $mform->setType('requirements', PARAM_TEXT);
 
-        if ($program->programtype === \local_shomokh_admissions\program_repository::TYPE_FOUNDATION) {
-            $gradeitems = [0 => get_string('nolevelcompletiongradeitem', 'local_shomokh_admissions')];
-            foreach (\local_shomokh_admissions\program_repository::get_level_completion_grade_items() as $item) {
-                $itemname = $item->itemname ?: get_string('coursegradeitem', 'local_shomokh_admissions');
-                $gradeitems[(int)$item->id] = format_string($item->categoryname)
-                    . ' / ' . format_string($item->coursename)
-                    . ' — ' . format_string($itemname);
-            }
-            $mform->addElement(
-                'autocomplete',
-                'eligibilitygradeitemid',
-                get_string('levelcompletiongradeitem', 'local_shomokh_admissions'),
-                $gradeitems,
-                ['noselectionstring' => get_string('nolevelcompletiongradeitem', 'local_shomokh_admissions')]
-            );
-            $mform->setType('eligibilitygradeitemid', PARAM_INT);
-            $mform->addHelpButton(
-                'eligibilitygradeitemid',
-                'levelcompletiongradeitem',
-                'local_shomokh_admissions'
-            );
-            $mform->addElement(
-                'text',
-                'eligibilitymingrade',
-                get_string('levelcompletionthreshold', 'local_shomokh_admissions'),
-                ['size' => 10]
-            );
-            $mform->setType('eligibilitymingrade', PARAM_FLOAT);
-            $mform->setDefault('eligibilitymingrade', 1);
-            $mform->addHelpButton(
-                'eligibilitymingrade',
-                'levelcompletionthreshold',
-                'local_shomokh_admissions'
-            );
-        } else {
-            $mform->addElement('hidden', 'eligibilitygradeitemid', 0);
-            $mform->setType('eligibilitygradeitemid', PARAM_INT);
-            $mform->addElement('hidden', 'eligibilitymingrade', 1);
-            $mform->setType('eligibilitymingrade', PARAM_FLOAT);
-        }
-
         $cohorts = [0 => get_string('nocohort', 'local_shomokh_admissions')];
         foreach ($DB->get_records('cohort', null, 'name ASC', 'id,name') as $cohort) {
             $cohorts[(int)$cohort->id] = format_string($cohort->name);
@@ -176,24 +135,6 @@ final class program_form extends \moodleform {
             )
         ) {
             $errors['telegramurl'] = get_string('readiness:telegram', 'local_shomokh_admissions');
-        }
-        if (!empty($data['eligibilitygradeitemid'])) {
-            $item = $DB->get_record('grade_items', ['id' => (int)$data['eligibilitygradeitemid']]);
-            if (!$item || (int)$item->gradetype !== 1 || $item->calculation === null) {
-                $errors['eligibilitygradeitemid'] = get_string(
-                    'readiness:missinggradeitem',
-                    'local_shomokh_admissions'
-                );
-            } else if (
-                !isset($data['eligibilitymingrade'])
-                || (float)$data['eligibilitymingrade'] < (float)$item->grademin
-                || (float)$data['eligibilitymingrade'] > (float)$item->grademax
-            ) {
-                $errors['eligibilitymingrade'] = get_string(
-                    'readiness:invalidthreshold',
-                    'local_shomokh_admissions'
-                );
-            }
         }
         return $errors;
     }

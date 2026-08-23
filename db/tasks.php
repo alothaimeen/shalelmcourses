@@ -44,6 +44,15 @@ $tasks = [
         'dayofweek' => '*',
     ],
     [
+        'classname' => '\\local_shomokh_admissions\\task\\reassess_pending',
+        'blocking' => 0,
+        'minute' => '*',
+        'hour' => '*',
+        'day' => '*',
+        'month' => '*',
+        'dayofweek' => '*',
+    ],
+    [
         'classname' => '\\local_shomokh_admissions\\task\\cleanup_certificates',
         'blocking' => 0,
         'minute' => '43',

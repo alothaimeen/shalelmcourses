@@ -156,6 +156,11 @@ echo html_writer::link(
     ['class' => 'btn btn-secondary']
 );
 echo html_writer::link(
+    new moodle_url('/local/shomokh_admissions/eligibility.php'),
+    get_string('eligibility:title', 'local_shomokh_admissions'),
+    ['class' => 'btn btn-secondary']
+);
+echo html_writer::link(
     new moodle_url('/local/shomokh_admissions/config.php'),
     get_string('generalsettings', 'local_shomokh_admissions'),
     ['class' => 'btn btn-secondary']

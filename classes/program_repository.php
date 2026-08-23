@@ -181,17 +181,6 @@ final class program_repository {
         $program->requirements = trim((string)($data->requirements ?? '')) ?: null;
         // Program type and pathway are installation invariants, not editable form data.
         $program->batchname = trim((string)($data->batchname ?? '')) ?: null;
-        if ($program->programtype === self::TYPE_FOUNDATION) {
-            $program->eligibilitygradeitemid = !empty($data->eligibilitygradeitemid)
-                ? (int)$data->eligibilitygradeitemid
-                : null;
-            $program->eligibilitymingrade = isset($data->eligibilitymingrade)
-                ? (float)$data->eligibilitymingrade
-                : 1;
-        } else {
-            $program->eligibilitygradeitemid = null;
-            $program->eligibilitymingrade = 1;
-        }
         $program->cohortid = !empty($data->cohortid) ? (int)$data->cohortid : null;
         $program->telegramurl = trim((string)($data->telegramurl ?? '')) ?: null;
         $program->enabled = empty($data->enabled) ? 0 : 1;
@@ -259,7 +248,7 @@ final class program_repository {
     /**
      * Prevents a live configuration from being saved in an unsafe state.
      */
-    private static function assert_site_ready_if_live(): void {
+    public static function assert_site_ready_if_live(): void {
         if (
             !empty(get_config('local_shomokh_admissions', 'enabled'))
                 && readiness_service::check_global()

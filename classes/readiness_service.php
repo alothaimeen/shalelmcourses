@@ -63,17 +63,6 @@ final class readiness_service {
             }
         }
 
-        if ($program->programtype === program_repository::TYPE_FOUNDATION && !empty($program->eligibilitygradeitemid)) {
-            $item = $DB->get_record('grade_items', ['id' => (int)$program->eligibilitygradeitemid]);
-            if (!$item || (int)$item->gradetype !== 1 || $item->calculation === null) {
-                $errors[] = get_string('readiness:missinggradeitem', 'local_shomokh_admissions');
-            } else if (
-                (float)$program->eligibilitymingrade < (float)$item->grademin
-                || (float)$program->eligibilitymingrade > (float)$item->grademax
-            ) {
-                $errors[] = get_string('readiness:invalidthreshold', 'local_shomokh_admissions');
-            }
-        }
         if (!empty($program->cohortid) && !$DB->record_exists('cohort', ['id' => $program->cohortid])) {
             $errors[] = get_string('readiness:missingcohort', 'local_shomokh_admissions');
         }
@@ -134,46 +123,18 @@ final class readiness_service {
     }
 
     /**
-     * Whether at least one enabled foundation program has a valid level result source.
+     * Whether at least one independent enabled graduation group is valid.
      *
      * @return bool
      */
     private static function has_valid_completion_source(): bool {
-        foreach (program_repository::get_all(true) as $program) {
-            if (
-                $program->programtype === program_repository::TYPE_FOUNDATION
-                && !empty($program->eligibilitygradeitemid)
-                && !self::grade_source_errors($program)
-            ) {
-                return true;
+        foreach ([eligibility_repository::LEGACY_BATCH_1, eligibility_repository::LEGACY_BATCH_2] as $code) {
+            $group = eligibility_repository::get_group_by_code($code);
+            if (!$group || empty($group->enabled) || eligibility_service::group_errors($group)) {
+                return false;
             }
         }
-        return false;
-    }
-
-    /**
-     * Returns only errors concerning a configured level result source.
-     *
-     * @param \stdClass $program Foundation program.
-     * @return array
-     */
-    private static function grade_source_errors(\stdClass $program): array {
-        global $DB;
-
-        if (empty($program->eligibilitygradeitemid)) {
-            return [get_string('readiness:nocompletionsource', 'local_shomokh_admissions')];
-        }
-        $item = $DB->get_record('grade_items', ['id' => (int)$program->eligibilitygradeitemid]);
-        if (!$item || (int)$item->gradetype !== 1 || $item->calculation === null) {
-            return [get_string('readiness:missinggradeitem', 'local_shomokh_admissions')];
-        }
-        if (
-            (float)$program->eligibilitymingrade < (float)$item->grademin
-            || (float)$program->eligibilitymingrade > (float)$item->grademax
-        ) {
-            return [get_string('readiness:invalidthreshold', 'local_shomokh_admissions')];
-        }
-        return [];
+        return true;
     }
 
     /**

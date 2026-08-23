@@ -14,19 +14,30 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
+namespace local_shomokh_admissions\task;
+
 /**
- * Plugin version metadata.
+ * Rechecks pending specialist applications against trusted internal results.
  *
  * @package    local_shomokh_admissions
  * @copyright  2026 Shomokh Al-Elm
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+final class reassess_pending extends \core\task\scheduled_task {
+    /**
+     * Returns the localised task name.
+     *
+     * @return string
+     */
+    public function get_name(): string {
+        return get_string('task:reassesspending', 'local_shomokh_admissions');
+    }
 
-defined('MOODLE_INTERNAL') || die();
-
-$plugin->component = 'local_shomokh_admissions';
-$plugin->version = 2026082302;
-$plugin->requires = 2024100700;
-$plugin->supported = [405, 405];
-$plugin->maturity = MATURITY_RC;
-$plugin->release = '1.0.0-rc9';
+    /**
+     * Executes one bounded reconciliation batch.
+     */
+    public function execute(): void {
+        $count = \local_shomokh_admissions\eligibility_service::reassess_pending(100);
+        mtrace('Shomokh admissions pending applications converted from internal results: ' . $count);
+    }
+}

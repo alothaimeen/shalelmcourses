@@ -253,6 +253,77 @@ final class application_service {
     }
 
     /**
+     * Converts one pending external application when a trusted internal
+     * graduation rule now proves eligibility.
+     *
+     * The same lock used by manual review prevents a scheduled reassessment
+     * from racing a staff decision. The now-unneeded certificate is deleted
+     * after the durable transition to minimise retained personal data.
+     *
+     * @param int $applicationid Application ID.
+     * @return bool True when converted and queued for enrolment.
+     */
+    public static function approve_internal_if_eligible(int $applicationid): bool {
+        global $DB;
+
+        $factory = \core\lock\lock_config::get_lock_factory('local_shomokh_admissions');
+        $lock = $factory->get_lock('review:' . $applicationid, 0);
+        if (!$lock) {
+            return false;
+        }
+        try {
+            $application = self::get($applicationid);
+            if ($application->status !== self::STATUS_PENDING) {
+                return false;
+            }
+            $group = eligibility_service::completed_foundation((int)$application->userid);
+            if (!$group) {
+                return false;
+            }
+
+            $oldstatus = $application->status;
+            $now = time();
+            $application->eligibilitysource = self::SOURCE_INTERNAL;
+            $application->status = self::STATUS_APPROVED;
+            $application->decisionby = null;
+            $application->decisionnote = null;
+            $application->studentmessage = null;
+            $application->timedecided = $now;
+            $application->timemodified = $now;
+            $application->recordversion++;
+
+            $transaction = $DB->start_delegated_transaction();
+            $DB->update_record('local_shadm_application', $application);
+            $operationid = enrolment_service::queue(
+                (int)$application->id,
+                (int)$application->userid,
+                (int)$application->targetprogramid
+            );
+            audit_service::record(
+                (int)$application->id,
+                null,
+                'internal_eligibility_reassessed',
+                $oldstatus,
+                self::STATUS_APPROVED,
+                (string)$group->code
+            );
+            $transaction->allow_commit();
+
+            get_file_storage()->delete_area_files(
+                \context_system::instance()->id,
+                'local_shomokh_admissions',
+                'certificate',
+                (int)$application->id
+            );
+            notification_service::send((int)$application->userid, 'approved');
+            enrolment_service::process($operationid);
+            return true;
+        } finally {
+            $lock->release();
+        }
+    }
+
+    /**
      * Applies a reviewer decision using optimistic version checking and a lock.
      *
      * @param int $applicationid Application ID.
