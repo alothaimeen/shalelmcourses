@@ -47,6 +47,9 @@ final class readiness_service {
         }
 
         foreach ($courses as $course) {
+            if (empty($course->visible)) {
+                $errors[] = get_string('readiness:hiddencourse', 'local_shomokh_admissions', $course->fullname);
+            }
             $instances = enrol_get_instances((int)$course->courseid, true);
             $hasmanual = false;
             foreach ($instances as $instance) {

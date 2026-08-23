@@ -136,6 +136,7 @@ $string['programtype:specialist'] = 'Specialist';
 $string['publicpreview'] = 'Show the closed admissions page to students';
 $string['publicpreview_help'] = 'Shows an informational card and page stating that admissions will be announced later. It accepts no applications or files and runs no recognition or enrolment.';
 $string['readconditions'] = 'Please read the conditions carefully to make sure you are on the right pathway.';
+$string['readiness:hiddencourse'] = 'Course “{$a}” is hidden from students.';
 $string['readiness:invalidthreshold'] = 'The level completion threshold is outside the grade item range.';
 $string['readiness:missingcohort'] = 'The linked cohort no longer exists.';
 $string['readiness:missingcourse'] = 'A linked course no longer exists.';

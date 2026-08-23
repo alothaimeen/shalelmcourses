@@ -148,5 +148,10 @@ function xmldb_local_shomokh_admissions_upgrade(int $oldversion): bool {
         upgrade_plugin_savepoint(true, 2026082300, 'local', 'shomokh_admissions');
     }
 
+    if ($oldversion < 2026082301) {
+        // No schema change: readiness now rejects hidden enrolment destinations.
+        upgrade_plugin_savepoint(true, 2026082301, 'local', 'shomokh_admissions');
+    }
+
     return true;
 }

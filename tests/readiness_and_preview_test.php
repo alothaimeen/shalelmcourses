@@ -67,6 +67,27 @@ final class readiness_and_preview_test extends \advanced_testcase {
     }
 
     /**
+     * Hidden destination courses are not ready even when manual enrolment is available.
+     */
+    public function test_readiness_reports_hidden_linked_course(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course([
+            'fullname' => 'Hidden specialist course',
+            'visible' => 0,
+        ]);
+        $program = $DB->get_record('local_shadm_program', ['code' => 'specialist_hadith'], '*', MUST_EXIST);
+        program_repository::add_course((int)$program->id, (int)$course->id);
+
+        $errors = readiness_service::check_program($program);
+
+        $this->assertContains(
+            get_string('readiness:hiddencourse', 'local_shomokh_admissions', $course->fullname),
+            $errors
+        );
+    }
+
+    /**
      * Public preview renders information without creating admission data.
      */
     public function test_public_preview_does_not_run_admission_operations(): void {

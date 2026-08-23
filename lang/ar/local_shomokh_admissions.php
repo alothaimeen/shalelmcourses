@@ -136,6 +136,7 @@ $string['programtype:specialist'] = 'تخصصي';
 $string['publicpreview'] = 'إظهار صفحة القبول المغلق للطالبات';
 $string['publicpreview_help'] = 'يعرض بطاقة وصفحة تعريفية فقط، مع رسالة أن القبول سيُعلن لاحقًا. لا يستقبل طلبات ولا ملفات، ولا يشغّل التعرف أو الإلحاق.';
 $string['readconditions'] = 'يرجى قراءة الشروط بدقة حتى تتأكدي أنكِ في المسار الصحيح.';
+$string['readiness:hiddencourse'] = 'المقرر «{$a}» مخفي عن الطالبات.';
 $string['readiness:invalidthreshold'] = 'قيمة اجتياز المستوى خارج نطاق درجات بند النتيجة.';
 $string['readiness:missingcohort'] = 'الزمرة المرتبطة لم تعد موجودة.';
 $string['readiness:missingcourse'] = 'أحد المقررات المرتبطة لم يعد موجودًا.';
