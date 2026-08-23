@@ -52,15 +52,6 @@ if ($action !== '') {
             \core\output\notification::NOTIFY_SUCCESS
         );
     }
-    if ($action === 'required' && $courseid) {
-        \local_shomokh_admissions\program_repository::toggle_required($programid, $courseid);
-        redirect(
-            new moodle_url('/local/shomokh_admissions/program.php', ['id' => $programid]),
-            get_string('courseupdated', 'local_shomokh_admissions'),
-            null,
-            \core\output\notification::NOTIFY_SUCCESS
-        );
-    }
 }
 
 $programform = new \local_shomokh_admissions\form\program_form(null, ['program' => $program]);
@@ -115,17 +106,7 @@ if (!$courses) {
     echo html_writer::start_tag('ul', ['class' => 'list-unstyled local-shadm-course-list']);
     foreach ($courses as $course) {
         $label = format_string($course->fullname) . ' (' . s($course->shortname) . ')';
-        if (!empty($course->eligibilityrequired)) {
-            $label .= ' — ' . get_string('eligibilityrequired', 'local_shomokh_admissions');
-        }
         $actions = $OUTPUT->single_button(new moodle_url('/local/shomokh_admissions/program.php', [
-            'id' => $programid,
-            'action' => 'required',
-            'courseid' => $course->courseid,
-        ]), get_string('toggleeligibility', 'local_shomokh_admissions'), 'post', [
-            'class' => 'btn btn-sm btn-secondary',
-        ]);
-        $actions .= $OUTPUT->single_button(new moodle_url('/local/shomokh_admissions/program.php', [
             'id' => $programid,
             'action' => 'remove',
             'courseid' => $course->courseid,

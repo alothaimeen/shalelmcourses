@@ -40,14 +40,12 @@ final class readiness_service {
         global $DB, $CFG;
 
         require_once($CFG->libdir . '/enrollib.php');
-        require_once($CFG->libdir . '/completionlib.php');
         $errors = [];
         $courses = program_repository::get_courses((int)$program->id);
         if (!$courses) {
             $errors[] = get_string('readiness:nocourses', 'local_shomokh_admissions');
         }
 
-        $requiredcount = 0;
         foreach ($courses as $course) {
             $instances = enrol_get_instances((int)$course->courseid, true);
             $hasmanual = false;
@@ -60,21 +58,18 @@ final class readiness_service {
             if (!$hasmanual) {
                 $errors[] = get_string('readiness:nomanual', 'local_shomokh_admissions', $course->fullname);
             }
-            if (!empty($course->eligibilityrequired)) {
-                $requiredcount++;
-                $completion = new \completion_info(get_course((int)$course->courseid));
-                if (!$completion->is_enabled()) {
-                    $errors[] = get_string(
-                        'readiness:completiondisabled',
-                        'local_shomokh_admissions',
-                        $course->fullname
-                    );
-                }
-            }
         }
 
-        if ($program->programtype === program_repository::TYPE_FOUNDATION && $requiredcount === 0) {
-            $errors[] = get_string('readiness:norequired', 'local_shomokh_admissions');
+        if ($program->programtype === program_repository::TYPE_FOUNDATION && !empty($program->eligibilitygradeitemid)) {
+            $item = $DB->get_record('grade_items', ['id' => (int)$program->eligibilitygradeitemid]);
+            if (!$item || (int)$item->gradetype !== 1 || $item->calculation === null) {
+                $errors[] = get_string('readiness:missinggradeitem', 'local_shomokh_admissions');
+            } else if (
+                (float)$program->eligibilitymingrade < (float)$item->grademin
+                || (float)$program->eligibilitymingrade > (float)$item->grademax
+            ) {
+                $errors[] = get_string('readiness:invalidthreshold', 'local_shomokh_admissions');
+            }
         }
         if (!empty($program->cohortid) && !$DB->record_exists('cohort', ['id' => $program->cohortid])) {
             $errors[] = get_string('readiness:missingcohort', 'local_shomokh_admissions');
@@ -126,10 +121,56 @@ final class readiness_service {
             $errors['global'][] = get_string('notconfigured', 'local_shomokh_admissions');
         }
         $specialistopen = program_repository::get_open_by_type(program_repository::TYPE_SPECIALIST);
+        if ($specialistopen && !self::has_valid_completion_source()) {
+            $errors['global'][] = get_string('readiness:nocompletionsource', 'local_shomokh_admissions');
+        }
         if ($specialistopen && !program_repository::get_default_fallback()) {
             $errors['global'][] = get_string('readiness:nofallback', 'local_shomokh_admissions');
         }
         return $errors;
+    }
+
+    /**
+     * Whether at least one enabled foundation program has a valid level result source.
+     *
+     * @return bool
+     */
+    private static function has_valid_completion_source(): bool {
+        foreach (program_repository::get_all(true) as $program) {
+            if (
+                $program->programtype === program_repository::TYPE_FOUNDATION
+                && !empty($program->eligibilitygradeitemid)
+                && !self::grade_source_errors($program)
+            ) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Returns only errors concerning a configured level result source.
+     *
+     * @param \stdClass $program Foundation program.
+     * @return array
+     */
+    private static function grade_source_errors(\stdClass $program): array {
+        global $DB;
+
+        if (empty($program->eligibilitygradeitemid)) {
+            return [get_string('readiness:nocompletionsource', 'local_shomokh_admissions')];
+        }
+        $item = $DB->get_record('grade_items', ['id' => (int)$program->eligibilitygradeitemid]);
+        if (!$item || (int)$item->gradetype !== 1 || $item->calculation === null) {
+            return [get_string('readiness:missinggradeitem', 'local_shomokh_admissions')];
+        }
+        if (
+            (float)$program->eligibilitymingrade < (float)$item->grademin
+            || (float)$program->eligibilitymingrade > (float)$item->grademax
+        ) {
+            return [get_string('readiness:invalidthreshold', 'local_shomokh_admissions')];
+        }
+        return [];
     }
 
     /**

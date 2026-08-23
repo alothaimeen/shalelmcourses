@@ -83,18 +83,28 @@ final class application_service_test extends \advanced_testcase {
     }
 
     /**
-     * Marks a mapped course as required for internal foundation completion.
+     * Configures a course total as the authoritative full-level result.
      *
      * @param \stdClass $program Foundation program.
-     * @param \stdClass $course Required course.
-     * @return void
+     * @param \stdClass $course Result course.
+     * @param \stdClass $student Student receiving the result.
+     * @param float $grade Result value.
+     * @return \grade_item Configured item.
      */
-    private function require_course(\stdClass $program, \stdClass $course): void {
+    private function configure_level_result(
+        \stdClass $program,
+        \stdClass $course,
+        \stdClass $student,
+        float $grade
+    ): \grade_item {
         global $DB;
-        $DB->set_field('local_shadm_progcourse', 'eligibilityrequired', 1, [
-            'programid' => $program->id,
-            'courseid' => $course->id,
-        ]);
+        $item = \grade_item::fetch_course_item((int)$course->id);
+        $DB->set_field('grade_items', 'calculation', '=1', ['id' => $item->id]);
+        $item = \grade_item::fetch(['id' => $item->id]);
+        $DB->set_field('local_shadm_program', 'eligibilitygradeitemid', (int)$item->id, ['id' => $program->id]);
+        $DB->set_field('local_shadm_program', 'eligibilitymingrade', 1, ['id' => $program->id]);
+        $item->update_final_grade((int)$student->id, $grade, 'local_shomokh_admissions_test');
+        return $item;
     }
 
     /**
@@ -144,15 +154,16 @@ final class application_service_test extends \advanced_testcase {
         $student = $this->getDataGenerator()->create_user();
         $foundationcourse = $this->create_admission_course('foundation_required');
         $foundation = $this->configure_program('foundation_b3', $foundationcourse, false);
-        $this->require_course($foundation, $foundationcourse);
+        $item = $this->configure_level_result($foundation, $foundationcourse, $student, 0);
         $specialistcourse = $this->create_admission_course('hadith_internal');
         $specialist = $this->configure_program('specialist_hadith', $specialistcourse);
 
-        $completion = new \completion_completion([
-            'course' => $foundationcourse->id,
-            'userid' => $student->id,
-        ]);
-        $completion->mark_complete();
+        $this->assertNull(eligibility_service::completed_foundation((int)$student->id));
+        $item->update_final_grade((int)$student->id, 1, 'local_shomokh_admissions_test');
+        $this->assertSame(
+            (int)$foundation->id,
+            (int)eligibility_service::completed_foundation((int)$student->id)->id
+        );
         set_config('enabled', 1, 'local_shomokh_admissions');
 
         $application = application_service::submit((int)$student->id, (int)$specialist->id, false);

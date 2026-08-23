@@ -70,6 +70,8 @@ function xmldb_local_shomokh_admissions_install(): void {
             'requirements' => null,
             'track' => null,
             'batchname' => null,
+            'eligibilitygradeitemid' => null,
+            'eligibilitymingrade' => 1,
             'cohortid' => null,
             'telegramurl' => null,
             'enabled' => 0,

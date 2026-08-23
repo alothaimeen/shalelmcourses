@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<XMLDB PATH="local/shomokh_admissions/db" VERSION="2026082000" COMMENT="XMLDB file for Shomokh admissions">
+<XMLDB PATH="local/shomokh_admissions/db" VERSION="2026082300" COMMENT="XMLDB file for Shomokh admissions">
   <TABLES>
     <TABLE NAME="local_shadm_program" COMMENT="Admission destinations and eligibility sets">
       <FIELDS>
@@ -11,6 +11,8 @@
         <FIELD NAME="programtype" TYPE="char" LENGTH="20" NOTNULL="true"/>
         <FIELD NAME="track" TYPE="char" LENGTH="32" NOTNULL="false"/>
         <FIELD NAME="batchname" TYPE="char" LENGTH="64" NOTNULL="false"/>
+        <FIELD NAME="eligibilitygradeitemid" TYPE="int" LENGTH="10" NOTNULL="false"/>
+        <FIELD NAME="eligibilitymingrade" TYPE="number" LENGTH="10" NOTNULL="true" DEFAULT="1" DECIMALS="5"/>
         <FIELD NAME="cohortid" TYPE="int" LENGTH="10" NOTNULL="false"/>
         <FIELD NAME="telegramurl" TYPE="text" NOTNULL="false"/>
         <FIELD NAME="enabled" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0"/>
@@ -27,6 +29,7 @@
       <INDEXES>
         <INDEX NAME="code_uix" UNIQUE="true" FIELDS="code"/>
         <INDEX NAME="type_enabled_ix" UNIQUE="false" FIELDS="programtype,enabled"/>
+        <INDEX NAME="eligibilitygradeitem_ix" UNIQUE="false" FIELDS="eligibilitygradeitemid"/>
         <INDEX NAME="cohort_ix" UNIQUE="false" FIELDS="cohortid"/>
       </INDEXES>
     </TABLE>

@@ -17,7 +17,7 @@
 namespace local_shomokh_admissions;
 
 /**
- * Resolves internal foundation completion using Moodle completion APIs.
+ * Resolves internal foundation completion from the configured level result.
  *
  * @package    local_shomokh_admissions
  * @copyright  2026 Shomokh Al-Elm
@@ -31,30 +31,28 @@ final class eligibility_service {
      * @return \stdClass|null Completed foundation program.
      */
     public static function completed_foundation(int $userid): ?\stdClass {
-        global $CFG;
-        require_once($CFG->libdir . '/completionlib.php');
+        global $DB;
 
         foreach (program_repository::get_all(true) as $program) {
-            if ($program->programtype !== program_repository::TYPE_FOUNDATION) {
+            if (
+                $program->programtype !== program_repository::TYPE_FOUNDATION
+                || empty($program->eligibilitygradeitemid)
+            ) {
                 continue;
             }
-            $required = array_filter(
-                program_repository::get_courses((int)$program->id),
-                static fn($course): bool => !empty($course->eligibilityrequired)
-            );
-            if (!$required) {
+            $item = $DB->get_record('grade_items', [
+                'id' => (int)$program->eligibilitygradeitemid,
+                'gradetype' => 1,
+            ], 'id, calculation');
+            if (!$item || $item->calculation === null) {
                 continue;
             }
-            $complete = true;
-            foreach ($required as $mapping) {
-                $course = get_course((int)$mapping->courseid);
-                $completion = new \completion_info($course);
-                if (!$completion->is_enabled() || !$completion->is_course_complete($userid)) {
-                    $complete = false;
-                    break;
-                }
-            }
-            if ($complete) {
+            $finalgrade = $DB->get_field('grade_grades', 'finalgrade', [
+                'itemid' => (int)$program->eligibilitygradeitemid,
+                'userid' => $userid,
+            ]);
+            if ($finalgrade !== false && $finalgrade !== null
+                && (float)$finalgrade >= (float)$program->eligibilitymingrade) {
                 return $program;
             }
         }

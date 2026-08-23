@@ -134,6 +134,32 @@ final class program_repository {
     }
 
     /**
+     * Returns numeric grade items that can represent completion of a full level.
+     *
+     * Only calculated items are included so a single course total, assignment or quiz
+     * cannot accidentally qualify a student for a specialist pathway.
+     *
+     * @return array Grade item records keyed by grade item ID.
+     */
+    public static function get_level_completion_grade_items(): array {
+        global $DB;
+
+        $sql = "SELECT gi.id, gi.courseid, gi.itemname, gi.itemtype, gi.grademin, gi.grademax,
+                       c.fullname AS coursename, c.shortname, cc.name AS categoryname
+                  FROM {grade_items} gi
+                  JOIN {course} c ON c.id = gi.courseid
+                  JOIN {course_categories} cc ON cc.id = c.category
+                 WHERE c.id <> :siteid
+                   AND gi.gradetype = :gradetype
+                   AND gi.calculation IS NOT NULL
+              ORDER BY cc.sortorder ASC, c.sortorder ASC, gi.sortorder ASC, gi.id ASC";
+        return $DB->get_records_sql($sql, [
+            'siteid' => SITEID,
+            'gradetype' => 1,
+        ]);
+    }
+
+    /**
      * Saves editable program fields.
      *
      * @param \stdClass $data Validated form data.
@@ -155,6 +181,17 @@ final class program_repository {
         $program->requirements = trim((string)($data->requirements ?? '')) ?: null;
         // Program type and pathway are installation invariants, not editable form data.
         $program->batchname = trim((string)($data->batchname ?? '')) ?: null;
+        if ($program->programtype === self::TYPE_FOUNDATION) {
+            $program->eligibilitygradeitemid = !empty($data->eligibilitygradeitemid)
+                ? (int)$data->eligibilitygradeitemid
+                : null;
+            $program->eligibilitymingrade = isset($data->eligibilitymingrade)
+                ? (float)$data->eligibilitymingrade
+                : 1;
+        } else {
+            $program->eligibilitygradeitemid = null;
+            $program->eligibilitymingrade = 1;
+        }
         $program->cohortid = !empty($data->cohortid) ? (int)$data->cohortid : null;
         $program->telegramurl = trim((string)($data->telegramurl ?? '')) ?: null;
         $program->enabled = empty($data->enabled) ? 0 : 1;
@@ -215,26 +252,6 @@ final class program_repository {
             'programid' => $programid,
             'courseid' => $courseid,
         ]);
-        self::assert_site_ready_if_live();
-        $transaction->allow_commit();
-    }
-
-    /**
-     * Changes whether a mapped course is required for foundation completion.
-     *
-     * @param int $programid Program ID.
-     * @param int $courseid Course ID.
-     * @return void
-     */
-    public static function toggle_required(int $programid, int $courseid): void {
-        global $DB;
-        $transaction = $DB->start_delegated_transaction();
-        $mapping = $DB->get_record('local_shadm_progcourse', [
-            'programid' => $programid,
-            'courseid' => $courseid,
-        ], '*', MUST_EXIST);
-        $mapping->eligibilityrequired = empty($mapping->eligibilityrequired) ? 1 : 0;
-        $DB->update_record('local_shadm_progcourse', $mapping);
         self::assert_site_ready_if_live();
         $transaction->allow_commit();
     }

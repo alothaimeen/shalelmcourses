@@ -56,7 +56,6 @@ final class readiness_and_preview_test extends \advanced_testcase {
         $specialisterrors = readiness_service::check_program($specialist);
 
         $this->assertContains(get_string('readiness:nocourses', 'local_shomokh_admissions'), $foundationerrors);
-        $this->assertContains(get_string('readiness:norequired', 'local_shomokh_admissions'), $foundationerrors);
         $this->assertContains(get_string('readiness:telegram', 'local_shomokh_admissions'), $foundationerrors);
         $this->assertContains(get_string('readiness:nocourses', 'local_shomokh_admissions'), $specialisterrors);
         $this->assertContains(get_string('readiness:telegram', 'local_shomokh_admissions'), $specialisterrors);
@@ -104,5 +103,59 @@ final class readiness_and_preview_test extends \advanced_testcase {
         $this->assertArrayNotHasKey((int)$linked->id, $courses);
         $this->assertArrayHasKey((int)$available->id, $courses);
         $this->assertSame('Available course', $courses[$available->id]->fullname);
+    }
+
+    /**
+     * Only calculated results are offered as full-level completion sources.
+     */
+    public function test_level_completion_options_exclude_plain_course_totals(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $plaincourse = $this->getDataGenerator()->create_course(['fullname' => 'Plain total course']);
+        $resultcourse = $this->getDataGenerator()->create_course(['fullname' => 'Level result course']);
+        $plainitem = \grade_item::fetch_course_item((int)$plaincourse->id);
+        $resultitem = \grade_item::fetch_course_item((int)$resultcourse->id);
+        $DB->set_field('grade_items', 'calculation', '=1', ['id' => $resultitem->id]);
+
+        $options = program_repository::get_level_completion_grade_items();
+
+        $this->assertArrayNotHasKey((int)$plainitem->id, $options);
+        $this->assertArrayHasKey((int)$resultitem->id, $options);
+    }
+
+    /**
+     * Open specialist pathways require at least one valid internal level result.
+     */
+    public function test_global_readiness_requires_internal_completion_source(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $specialist = $DB->get_record('local_shadm_program', ['code' => 'specialist_hadith'], '*', MUST_EXIST);
+        $specialist->enabled = 1;
+        $specialist->registrationopen = 1;
+        $specialist->telegramurl = 'https://t.me/test_hadith';
+        $DB->update_record('local_shadm_program', $specialist);
+        program_repository::add_course(
+            (int)$specialist->id,
+            (int)$this->getDataGenerator()->create_course()->id
+        );
+        $foundation = $DB->get_record('local_shadm_program', ['code' => 'foundation_b3'], '*', MUST_EXIST);
+        $foundation->enabled = 1;
+        $foundation->defaultfallback = 1;
+        $DB->update_record('local_shadm_program', $foundation);
+
+        $errors = readiness_service::check_global();
+        $this->assertContains(
+            get_string('readiness:nocompletionsource', 'local_shomokh_admissions'),
+            $errors['global']
+        );
+
+        $resultcourse = $this->getDataGenerator()->create_course();
+        $resultitem = \grade_item::fetch_course_item((int)$resultcourse->id);
+        $DB->set_field('grade_items', 'calculation', '=1', ['id' => $resultitem->id]);
+        $DB->set_field('local_shadm_program', 'eligibilitygradeitemid', $resultitem->id, ['id' => $foundation->id]);
+        $DB->set_field('local_shadm_program', 'eligibilitymingrade', 1, ['id' => $foundation->id]);
+
+        $errors = readiness_service::check_global();
+        $this->assertArrayNotHasKey('global', $errors);
     }
 }
