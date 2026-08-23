@@ -135,11 +135,13 @@ function xmldb_local_shomokh_admissions_upgrade(int $oldversion): bool {
         $DB->set_field('local_shadm_program', 'registrationopen', 0, ['code' => 'foundation_b3']);
 
         // Fail closed only if the migration could not identify any enabled internal completion source.
-        if (!$DB->record_exists_select(
-            'local_shadm_program',
-            'programtype = :programtype AND enabled = 1 AND eligibilitygradeitemid IS NOT NULL',
-            ['programtype' => 'foundation']
-        )) {
+        if (
+            !$DB->record_exists_select(
+                'local_shadm_program',
+                'programtype = :programtype AND enabled = 1 AND eligibilitygradeitemid IS NOT NULL',
+                ['programtype' => 'foundation']
+            )
+        ) {
             set_config('enabled', 0, 'local_shomokh_admissions');
         }
 

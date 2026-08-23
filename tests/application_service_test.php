@@ -16,6 +16,11 @@
 
 namespace local_shomokh_admissions;
 
+defined('MOODLE_INTERNAL') || die();
+
+global $CFG;
+require_once($CFG->libdir . '/gradelib.php');
+
 /**
  * Tests application, review, consent and enrolment states end to end.
  *

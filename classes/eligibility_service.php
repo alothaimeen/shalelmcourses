@@ -51,8 +51,10 @@ final class eligibility_service {
                 'itemid' => (int)$program->eligibilitygradeitemid,
                 'userid' => $userid,
             ]);
-            if ($finalgrade !== false && $finalgrade !== null
-                && (float)$finalgrade >= (float)$program->eligibilitymingrade) {
+            if (
+                $finalgrade !== false && $finalgrade !== null
+                && (float)$finalgrade >= (float)$program->eligibilitymingrade
+            ) {
                 return $program;
             }
         }
